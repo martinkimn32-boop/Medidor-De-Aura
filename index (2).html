@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d0a14">
+<title>Contador de Aura RPG - 10 Retos</title>
+<style>
+:root {
+    --rank: #a0a0a0;
+    --rank-rgb: 200, 100, 0;
+    --bg: #0d0a14;
+    --panel-bg: rgba(20, 15, 30, 0.88);
+}
+* {
+    box-sizing: border-box; margin: 0; padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+}
+html, body { height: 100%; }
+body {
+    background: radial-gradient(ellipse at 50% 55%, #1c1030 0%, var(--bg) 60%, #000 100%);
+    color: #fff; height: 100vh; height: 100dvh;
+    display: flex; flex-direction: column; align-items: center; overflow: hidden;
+}
+
+/* ---------- Encabezado ---------- */
+header { z-index: 10; text-align: center; margin-top: 16px; padding: 0 10px; flex: none; }
+h1.title {
+    font-size: clamp(1.8rem, 6vw, 2.9rem); text-transform: uppercase; letter-spacing: 4px;
+    color: #ffcc00; text-shadow: 0 0 10px #ff5500, 0 0 20px #ff0000;
+    animation: pulseText 2s infinite alternate;
+}
+@keyframes pulseText { from { transform: scale(1); } to { transform: scale(1.05); } }
+.rank-badge {
+    display: inline-block; margin-top: 10px; padding: 6px 16px; border-radius: 20px;
+    font-weight: bold; font-size: 1.05rem; text-transform: uppercase; letter-spacing: 2px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid var(--rank); color: var(--rank); box-shadow: 0 0 15px var(--rank);
+    transition: border-color .5s, color .5s, box-shadow .5s;
+}
+
+/* ---------- Escenario (fuego + aura + temporizador) ---------- */
+.stage { position: relative; flex: 1; width: 100%; min-height: 0; container-type: size; }
+#fireCanvas {
+    --fire: min(92vw, 440px, 44vh);
+    position: absolute; inset: 0; margin: auto;
+    width: var(--fire); height: var(--fire); z-index: 1; pointer-events: none;
+}
+@supports (width: 1cqw) { #fireCanvas { --fire: min(92cqw, 440px, 100cqh); } }
+
+.aura-container {
+    position: absolute; inset: 0; z-index: 5; pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+}
+.aura-score {
+    font-size: clamp(3.6rem, 13vw, 5.5rem); font-weight: 900; color: #fff; line-height: 1;
+    text-shadow: 0 0 20px var(--rank), 0 0 40px var(--rank);
+}
+.aura-label { font-size: 1.1rem; letter-spacing: 3px; text-transform: uppercase; color: #ffd700; opacity: .85; }
+
+.float-pop {
+    position: absolute; left: 50%; top: 38%; z-index: 20; pointer-events: none; white-space: nowrap;
+    font-size: clamp(1.6rem, 6vw, 2.4rem); font-weight: 900; color: #ffe066;
+    text-shadow: 0 0 12px #ff9900, 0 0 24px #ff5500; opacity: 0;
+}
+
+/* Temporizador gigante */
+.timer-display {
+    position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); z-index: 8;
+    pointer-events: none; opacity: 0; transition: opacity .25s; text-align: center;
+    font-size: clamp(2.6rem, 9vw, 3.5rem); font-weight: 900; color: #ff3333;
+    text-shadow: 0 0 20px #f00; font-variant-numeric: tabular-nums;
+}
+.timer-display.active { opacity: 1; }
+.timer-scale { display: inline-block; transform: scale(var(--s, 1)); transition: transform .1s linear; will-change: transform; }
+#timerValue { display: inline-block; }
+.timer-display.danger #timerValue { animation: throb .35s infinite alternate ease-in-out; }
+@keyframes throb {
+    from { transform: scale(1); color: #ffaa00; }
+    to   { transform: scale(1.18); color: #ff0000; text-shadow: 0 0 40px #f00; }
+}
+
+/* ---------- Panel RPG ---------- */
+.rpg-panel {
+    z-index: 10; flex: none; width: 92%; max-width: 620px; position: relative;
+    margin-bottom: max(20px, env(safe-area-inset-bottom));
+    background: var(--panel-bg); border: 3px solid var(--rank); border-radius: 12px; padding: 18px;
+    box-shadow: 0 0 25px rgba(var(--rank-rgb), .35), inset 0 0 15px rgba(0, 0, 0, .8);
+    text-align: center; backdrop-filter: blur(6px);
+    transition: border-color .5s, box-shadow .5s;
+}
+.challenge-badge {
+    display: inline-block; font-size: .72rem; letter-spacing: 2px; text-transform: uppercase;
+    color: #ffbe3b; background: rgba(120, 70, 0, .5); border: 1px solid rgba(255, 190, 59, .5);
+    padding: 3px 10px; border-radius: 6px; margin-bottom: 10px;
+}
+.challenge-text {
+    min-height: 64px; margin-bottom: 12px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px; line-height: 1.35;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, .8);
+}
+.prompt-main { font-size: clamp(1.05rem, 4vw, 1.3rem); }
+.prompt-main.go { color: #00ff66; font-weight: 900; font-size: 1.5rem; text-shadow: 0 0 15px #00ff66; }
+.prompt-main.fail-title { color: #ff4444; font-weight: 900; text-shadow: 0 0 15px #f00; }
+.hint { font-size: .88rem; opacity: .75; font-weight: 400; }
+.prompt-main.go + .hint { opacity: 1; }
+
+.interactive-zone {
+    min-height: 80px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+}
+.interactive-zone.frozen { pointer-events: none; opacity: .6; }
+
+.btn-challenge {
+    background: linear-gradient(135deg, #ff8800, #ff2200); border: 2px solid #ffe600; color: #fff;
+    padding: 12px 26px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer;
+    box-shadow: 0 4px 15px rgba(255, 34, 0, .4); transition: transform .1s;
+}
+.btn-challenge:active { transform: scale(.95); }
+.color-btn {
+    width: 66px; height: 66px; border-radius: 10px; border: 3px solid #fff; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .5); transition: transform .1s;
+}
+.color-btn:active { transform: scale(.9); }
+button:focus-visible, input:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+input[type="text"] {
+    background: rgba(0, 0, 0, .7); border: 2px solid var(--rank); color: #fff; padding: 10px 15px;
+    font-size: 1.2rem; border-radius: 6px; text-align: center; outline: none;
+    width: 80%; max-width: 300px; user-select: text; -webkit-user-select: text;
+}
+
+/* Barra de mantener presionado */
+.hold-bar {
+    position: relative; width: min(85%, 420px); height: 28px; overflow: hidden; cursor: pointer;
+    background: rgba(0, 0, 0, .6); border: 2px solid #555; border-radius: 14px; touch-action: none;
+    transition: border-color .2s, box-shadow .2s;
+}
+.hold-bar.ok { border-color: #00ff66; box-shadow: 0 0 22px #00ff66; }
+.hold-fill {
+    position: absolute; inset: 0; transform-origin: left center; transform: scaleX(0); will-change: transform;
+    background: linear-gradient(90deg, #ffbb00, #ff0055);
+}
+.hold-bar.ok .hold-fill { background: linear-gradient(90deg, #00ff88, #00ffcc); }
+.hold-zone {
+    position: absolute; top: 0; bottom: 0; left: 66.667%; right: 0; pointer-events: none;
+    background: rgba(0, 255, 100, .3); border-left: 2px dashed #00ff66;
+}
+.hold-bar.ok .hold-zone { background: rgba(0, 255, 100, .55); }
+
+/* Medalla de donador (esquina superior derecha) */
+.donor-medal {
+    position: fixed; top: 14px; right: 16px; z-index: 20; display: none;
+    background: linear-gradient(135deg, #ffd700, #ff8800); color: #000;
+    padding: 8px 16px; border-radius: 20px; border: 2px solid #fff;
+    font-weight: 900; font-size: .95rem; text-transform: uppercase;
+    box-shadow: 0 0 15px #ffd700; animation: medalGlow 1.5s infinite alternate;
+}
+.donor-medal.show { display: block; }
+@keyframes medalGlow {
+    from { box-shadow: 0 0 10px #ffd700; transform: scale(1); }
+    to   { box-shadow: 0 0 25px #ffaa00; transform: scale(1.05); }
+}
+.btn-yes { background: linear-gradient(135deg, #00ff88, #00aa44); border-color: #fff; }
+.btn-no  { background: linear-gradient(135deg, #ff3333, #aa0000); border-color: #fff; }
+.btn-challenge:disabled { opacity: .6; cursor: default; }
+@media (max-width: 640px) {
+    .donor-medal { top: 6px; right: 6px; padding: 4px 10px; font-size: .7rem; }
+}
+@media (prefers-reduced-motion: reduce) { .donor-medal { animation: none; } }
+
+/* Aviso flotante de bonus */
+.bonus-toast {
+    position: absolute; left: 50%; top: -10px; transform: translate(-50%, -60%);
+    background: #00ffaa; color: #000; font-weight: bold; padding: 5px 15px; border-radius: 20px;
+    box-shadow: 0 0 15px #00ffaa; opacity: 0; pointer-events: none; width: max-content; max-width: 88vw; text-align: center;
+    transition: opacity .3s, transform .3s;
+}
+.bonus-toast.show { opacity: 1; transform: translate(-50%, -110%); }
+
+@media (max-height: 640px) {
+    header { margin-top: 8px; }
+    .rank-badge { margin-top: 6px; padding: 3px 12px; }
+    .rpg-panel { padding: 12px; }
+    .challenge-text { min-height: 52px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    h1.title, .timer-display.danger #timerValue { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+    <h1 class="title">Contador de Aura</h1>
+    <div id="rankBadge" class="rank-badge">Rango: Hierro</div>
+</header>
+
+<div id="donorMedal" class="donor-medal">🛡️ Donador con Aura</div>
+
+<main class="stage" id="stage">
+    <canvas id="fireCanvas" aria-hidden="true"></canvas>
+
+    <div class="aura-container">
+        <div class="aura-score" id="auraScore">0</div>
+        <div class="aura-label">Aura Absoluta</div>
+    </div>
+
+    <div class="timer-display" id="timerDisplay" aria-hidden="true">
+        <div class="timer-scale" id="timerScale"><span id="timerValue">5.0</span></div>
+    </div>
+</main>
+
+<section class="rpg-panel">
+    <div id="bonusToast" class="bonus-toast" role="status"></div>
+    <div class="challenge-badge" id="challengeBadge">RETO</div>
+    <div class="challenge-text">
+        <span id="promptMain" class="prompt-main">Cargando desafío...</span>
+        <span id="promptSub" class="hint"></span>
+    </div>
+    <div class="interactive-zone" id="interactiveZone"></div>
+</section>
+
+<script>
+'use strict';
+
+/* =====================================================================
+   UTILIDADES
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const root = document.documentElement;
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const stage = $('stage'), canvas = $('fireCanvas'), scoreEl = $('auraScore'),
+      badgeEl = $('rankBadge'), toastEl = $('bonusToast'), challengeBadge = $('challengeBadge'),
+      promptMain = $('promptMain'), promptSub = $('promptSub'), zoneEl = $('interactiveZone'),
+      timerEl = $('timerDisplay'), timerScale = $('timerScale'), timerValue = $('timerValue'),
+      donorMedal = $('donorMedal');
+
+const setText = (el, t) => { if (el.textContent !== t) el.textContent = t; };
+const rand = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const norm = s => s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+function div(cls) { const d = document.createElement('div'); d.className = cls; return d; }
+function store(key, value) {
+    try {
+        if (value === undefined) return localStorage.getItem(key) || '';
+        localStorage.setItem(key, value);
+    } catch (e) { return ''; }
+}
+
+/* =====================================================================
+   AUDIO (Web Audio API) - el contexto se crea en la primera interacción
+   ===================================================================== */
+const Sound = (() => {
+    let ac = null;
+    function ctx() {
+        if (!ac) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return null;
+            ac = new AC();
+        }
+        if (ac.state === 'suspended') ac.resume();
+        return ac;
+    }
+    function tone(type, f1, f2, dur, vol, delay = 0) {
+        const a = ctx();
+        if (!a) return;
+        const t = a.currentTime + delay;
+        const o = a.createOscillator(), g = a.createGain();
+        o.type = type;
+        o.frequency.setValueAtTime(f1, t);
+        if (f2 !== f1) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+        g.gain.setValueAtTime(vol, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.connect(g);
+        g.connect(a.destination);
+        o.start(t);
+        o.stop(t + dur + 0.02);
+    }
+    return {
+        unlock: ctx,
+        click()   { tone('sine', 400, 800, 0.06, 0.25); },
+        tick()    { tone('square', 880, 880, 0.04, 0.08); },
+        alarm()   { tone('square', 1200, 800, 0.12, 0.14); },
+        ping()    { tone('triangle', 1318, 1318, 0.15, 0.22); },
+        success() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone('triangle', f, f, 0.25, 0.25, i * 0.08)); },
+        fail() {
+            tone('sawtooth', 220, 40, 0.8, 0.4);
+            tone('square', 110, 30, 0.9, 0.25, 0.1);
+            tone('sawtooth', 90, 25, 1.0, 0.2, 0.3);
+        }
+    };
+})();
+['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, () => Sound.unlock(), { once: true }));
+
+/* =====================================================================
+   RANGOS
+   ===================================================================== */
+const RANKS = [
+    { min: 0,   name: "Hierro",                 color: "#a0a0a0", fire: [200, 100, 0] },
+    { min: 10,  name: "Bronce",                 color: "#cd7f32", fire: [220, 120, 20] },
+    { min: 20,  name: "Plata",                  color: "#e0e0e0", fire: [180, 200, 220] },
+    { min: 30,  name: "Oro",                    color: "#ffd700", fire: [255, 215, 0] },
+    { min: 40,  name: "Platino",                color: "#00efb8", fire: [0, 239, 184] },
+    { min: 50,  name: "Diamante",               color: "#b9f2ff", fire: [185, 242, 255] },
+    { min: 60,  name: "Maestro",                color: "#9932cc", fire: [153, 50, 204] },
+    { min: 70,  name: "Gran Maestro",           color: "#ff0055", fire: [255, 0, 85] },
+    { min: 80,  name: "Challenger",             color: "#ffff55", fire: [255, 255, 85] },
+    { min: 100, name: "Dios Absoluto del Aura", color: "#ffffff", fire: [255, 255, 255] }
+];
+
+/* =====================================================================
+   FUEGO (Canvas optimizado: sprites precalculados, sin shadowBlur)
+   ===================================================================== */
+const W = 400, H = 400, MAX_PARTICLES = 120;
+const cctx = canvas.getContext('2d');
+let lastDpr = 0;
+
+function setupCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (dpr === lastDpr) return;
+    lastDpr = dpr;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+setupCanvas();
+window.addEventListener('resize', setupCanvas);
+
+function buildSprite(rgb, core = 0.55) {
+    const s = document.createElement('canvas');
+    s.width = s.height = 64;
+    const g = s.getContext('2d');
+    const [r, gr, b] = rgb;
+    const cr = Math.round(r + (255 - r) * core), cg = Math.round(gr + (255 - gr) * core), cb = Math.round(b + (255 - b) * core);
+    const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, `rgba(${cr},${cg},${cb},1)`);
+    grad.addColorStop(0.35, `rgba(${r},${gr},${b},0.85)`);
+    grad.addColorStop(1, `rgba(${r},${gr},${b},0)`);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+    return s;
+}
+function buildGlow(rgb) {
+    const s = document.createElement('canvas');
+    s.width = s.height = 256;
+    const g = s.getContext('2d');
+    const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+    grad.addColorStop(0, `rgba(${rgb.join(',')},0.55)`);
+    grad.addColorStop(1, `rgba(${rgb.join(',')},0)`);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 256, 256);
+    return s;
+}
+
+const SPRITE_BOOST = buildSprite([255, 225, 110], 0.6);
+const fire = {
+    count: 48, size: 1, speed: 1, spread: 1, alpha: 1, glow: 0.22,
+    sprite: null, glowSprite: null, boostUntil: 0
+};
+
+function setFire(rgb, level, critical) {
+    if (critical) {
+        Object.assign(fire, { count: 20, size: 0.6, speed: 0.7, spread: 0.8, alpha: 0.45, glow: 0.06 });
+        rgb = [120, 25, 25]; // tono crítico
+    } else {
+        Object.assign(fire, {
+            count: Math.min(MAX_PARTICLES, Math.round(48 + level * 7)),
+            size: 0.9 + level * 0.07, speed: 1 + level * 0.04, spread: 1 + level * 0.05,
+            alpha: 1, glow: 0.22 + level * 0.04
+        });
+    }
+    fire.sprite = buildSprite(rgb);
+    fire.glowSprite = buildGlow(rgb);
+}
+
+class Particle {
+    constructor() { this.reset(true); }
+    reset(initial = false) {
+        this.x = W / 2 + (Math.random() - 0.5) * 60 * fire.spread;
+        this.y = H - 80 - (initial ? Math.random() * 120 : 0);
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = -(Math.random() * 3 + 2);
+        this.size = (Math.random() * 18 + 12) * fire.size;
+        this.life = initial ? Math.random() : 1;
+        this.decay = Math.random() * 0.03 + 0.015;
+    }
+    update(k, speed) {
+        this.x += this.vx * k * speed;
+        this.y += this.vy * k * speed;
+        this.size *= Math.pow(0.96, k);
+        this.life -= this.decay * k;
+        if (this.life <= 0 || this.size < 2) this.reset();
+    }
+}
+const particles = Array.from({ length: MAX_PARTICLES }, () => new Particle());
+
+let lastFrame = performance.now();
+function fireLoop(now) {
+    const k = Math.min(Math.max((now - lastFrame) / 16.667, 0), 3); // independiente de los Hz del monitor
+    lastFrame = now;
+    const boosting = now < fire.boostUntil;
+    const sprite = boosting ? SPRITE_BOOST : fire.sprite;
+    const speed = fire.speed * (boosting ? 1.5 : 1);
+    const grow = boosting ? 1.25 : 1;
+
+    cctx.clearRect(0, 0, W, H);
+    cctx.globalCompositeOperation = 'lighter';
+
+    cctx.globalAlpha = Math.min(1, fire.glow * (boosting ? 2 : 1));
+    cctx.drawImage(fire.glowSprite, W / 2 - 140, H - 90 - 140, 280, 280);
+
+    for (let i = 0; i < fire.count; i++) {
+        const p = particles[i];
+        p.update(k, speed);
+        const s = p.size * grow;
+        cctx.globalAlpha = Math.max(0, p.life) * fire.alpha;
+        cctx.drawImage(sprite, p.x - s, p.y - s, s * 2, s * 2);
+    }
+    cctx.globalAlpha = 1;
+    cctx.globalCompositeOperation = 'source-over';
+    requestAnimationFrame(fireLoop);
+}
+
+/* =====================================================================
+   ESTADO Y UI
+   ===================================================================== */
+let aura = 0;
+let rankIdx = -1;
+let phase = 'playing';        // playing | transition | over
+let index = -1;
+let run = null;
+let lastAnimal = store('auraLastAnimal');
+let donor = store('auraDonor') === '1';   // medalla permanente (se guarda en el navegador)
+let donationOffered = false;              // el reto de donación sale una vez por partida
+let toastTimer = 0;
+const TRANSITION_MS = 750;
+
+function rankIndexFor(a) {
+    let idx = 0;
+    for (let i = 0; i < RANKS.length; i++) if (a >= RANKS[i].min) idx = i;
+    return idx;
+}
+
+function applyRank(force = false) {
+    const idx = rankIndexFor(aura);
+    if (idx === rankIdx && !force) return;
+    const prev = rankIdx;
+    rankIdx = idx;
+    const r = RANKS[idx];
+    root.style.setProperty('--rank', r.color);
+    root.style.setProperty('--rank-rgb', r.fire.join(','));
+    setText(badgeEl, `Rango: ${r.name}`);
+    setFire(r.fire, idx, false);
+    if (!reduceMotion && prev >= 0 && idx > prev) {
+        badgeEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.3)' }, { transform: 'scale(1)' }], { duration: 500 });
+    }
+}
+
+function setPrompt(main, sub = '') {
+    promptMain.className = 'prompt-main';
+    promptSub.className = 'hint';
+    setText(promptMain, main);
+    setText(promptSub, sub);
+}
+
+function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2000);
+}
+
+function floatText(text) {
+    const el = div('float-pop');
+    el.textContent = text;
+    stage.appendChild(el);
+    if (reduceMotion) { el.style.opacity = 1; setTimeout(() => el.remove(), 900); return; }
+    const anim = el.animate([
+        { opacity: 0, transform: 'translate(-50%, 20px) scale(.5)' },
+        { opacity: 1, transform: 'translate(-50%, -40px) scale(1.4)', offset: 0.35 },
+        { opacity: 0, transform: 'translate(-50%, -110px) scale(1)' }
+    ], { duration: 1300, easing: 'cubic-bezier(.1,.8,.3,1)' });
+    anim.onfinish = () => el.remove();
+}
+
+function bumpScore() {
+    if (reduceMotion) return;
+    scoreEl.animate([
+        { transform: 'scale(1)' },
+        { transform: 'scale(1.4)', color: '#00ffff' },
+        { transform: 'scale(1)' }
+    ], { duration: 350, easing: 'ease-out' });
+}
+
+function hideTimer() {
+    timerEl.classList.remove('active', 'danger');
+    timerScale.style.setProperty('--s', '1');
+}
+
+/* =====================================================================
+   CICLO DE VIDA DE UN RETO
+   Cada reto recibe un objeto "r" que registra TODO lo que abre (listeners,
+   timeouts, animation frames) y lo limpia al ganar/perder. r.win y r.lose
+   solo pueden ejecutarse una vez.
+   ===================================================================== */
+function createRun() {
+    const r = { done: false, cleanups: [] };
+    r.on = (target, type, fn, opts) => {
+        target.addEventListener(type, fn, opts);
+        r.cleanups.push(() => target.removeEventListener(type, fn, opts));
+    };
+    r.after = (ms, fn) => {
+        const id = setTimeout(fn, ms);
+        r.cleanups.push(() => clearTimeout(id));
+    };
+    r.timer = (seconds, opts) => startTimer(r, seconds, opts);
+    r.dispose = () => {
+        r.cleanups.splice(0).forEach(fn => fn());
+        hideTimer();
+    };
+    r.win = (points = 1, msg = '') => {
+        if (r.done) return;
+        r.done = true; r.dispose();
+        handleWin(points, msg);
+    };
+    r.lose = (reason = 'Has sucumbido a la presión.') => {
+        if (r.done) return;
+        r.done = true; r.dispose();
+        handleLose(reason);
+    };
+    return r;
+}
+
+function startTimer(r, seconds, { grow = false } = {}) {
+    const total = seconds * 1000;
+    const t0 = performance.now();
+    let id = 0;
+    let lastWhole = Math.ceil(seconds);
+    timerEl.classList.add('active');
+    timerEl.classList.remove('danger');
+    timerScale.style.setProperty('--s', '1');
+    setText(timerValue, seconds.toFixed(1));
+
+    const frame = () => {
+        const left = Math.max(0, total - (performance.now() - t0));
+        setText(timerValue, (left / 1000).toFixed(1));
+        if (grow) timerScale.style.setProperty('--s', (1 + (1 - left / total) * 1.2).toFixed(2));
+        if (left <= 2000) timerEl.classList.add('danger');
+        const whole = Math.ceil(left / 1000);
+        if (whole !== lastWhole && left > 0) {
+            lastWhole = whole;
+            if (left <= 2000) Sound.alarm(); else Sound.tick();
+        }
+        if (left <= 0) { r.lose('Se acabó el tiempo.'); return; }
+        id = requestAnimationFrame(frame);
+    };
+    id = requestAnimationFrame(frame);
+    r.cleanups.push(() => cancelAnimationFrame(id));
+}
+
+function handleWin(points, msg) {
+    phase = 'transition';
+    zoneEl.classList.add('frozen');
+    zoneEl.querySelectorAll('input, button').forEach(el => { el.disabled = true; });
+    Sound.success();
+
+    aura += points;
+    setText(scoreEl, String(aura));
+    bumpScore();
+    floatText(`+${points} AURA`);
+    if (msg) toast(msg);
+
+    fire.boostUntil = performance.now() + 700;
+    if (!reduceMotion) {
+        canvas.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.15)' }, { transform: 'scale(1)' }], { duration: 500, easing: 'ease-out' });
+    }
+    applyRank();
+    setTimeout(nextChallenge, TRANSITION_MS);
+}
+
+function handleLose(reason) {
+    phase = 'over';
+    run = null;
+    Sound.fail();
+    if (!reduceMotion) {
+        document.body.animate([
+            { transform: 'translateX(0)' }, { transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' },
+            { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }
+        ], { duration: 500 });
+    }
+    aura = 0;
+    setText(scoreEl, '0');
+    applyRank(true);
+    setFire(RANKS[0].fire, 0, true); // fuego en tono crítico, sin brillo
+    fire.boostUntil = 0;
+
+    challengeBadge.textContent = 'DERROTA';
+    setPrompt('¡PERDISTE TU AURA!', reason);
+    promptMain.classList.add('fail-title');
+
+    zoneEl.classList.remove('frozen');
+    zoneEl.replaceChildren();
+    const retry = document.createElement('button');
+    retry.className = 'btn-challenge';
+    retry.textContent = 'Reintentar desde 0';
+    retry.onclick = restart;
+    zoneEl.appendChild(retry);
+    // Se enfoca con retraso para que una tecla soltada justo ahora no lo active por accidente
+    setTimeout(() => { if (retry.isConnected) retry.focus({ preventScroll: true }); }, 600);
+}
+
+function restart() {
+    aura = 0;
+    donationOffered = false;
+    setText(scoreEl, '0');
+    applyRank(true);
+    index = -1;
+    nextChallenge();
+}
+
+function nextChallenge() {
+    if (run) run.dispose();
+    zoneEl.classList.remove('frozen');
+    zoneEl.replaceChildren();
+    phase = 'playing';
+    run = createRun();
+
+    // Reto especial: no avanza la rotación normal
+    if (shouldOfferDonation()) {
+        donationOffered = true;
+        challengeBadge.textContent = 'RETO ESPECIAL · APOYO';
+        DONATION_CHALLENGE.run(zoneEl, run);
+        return;
+    }
+
+    index = (index + 1) % CHALLENGES.length;
+    const c = CHALLENGES[index];
+    challengeBadge.textContent = `RETO ${index + 1}/${CHALLENGES.length} · ${c.name}`;
+    c.run(zoneEl, run);
+}
+
+/* =====================================================================
+   HELPERS DE RETOS
+   ===================================================================== */
+function makeButton(zone, label, onClick) {
+    const b = document.createElement('button');
+    b.className = 'btn-challenge';
+    b.textContent = label;
+    b.addEventListener('click', onClick);
+    // Evita "hacer trampa" dejando Enter apretado (autorepetición)
+    b.addEventListener('keydown', e => { if (e.repeat) e.preventDefault(); });
+    zone.appendChild(b);
+    return b;
+}
+
+function makeInput(zone, placeholder, maxLength) {
+    const i = document.createElement('input');
+    i.type = 'text';
+    i.placeholder = placeholder;
+    i.autocomplete = 'off';
+    i.autocapitalize = 'off';
+    i.spellcheck = false;
+    i.enterKeyHint = 'send';
+    if (maxLength) i.maxLength = maxLength;
+    zone.appendChild(i);
+    i.focus({ preventScroll: true });
+    return i;
+}
+
+function onSubmit(r, input, fn) {
+    r.on(input, 'keydown', e => {
+        if (e.key === 'Enter' && !e.repeat && !e.isComposing) {
+            e.preventDefault();
+            fn(input.value);
+        }
+    });
+}
+
+/* =====================================================================
+   LOS 10 RETOS
+   ===================================================================== */
+const COLORS = [
+    { name: 'ROJO',     hex: '#ff3333' },
+    { name: 'AZUL',     hex: '#3388ff' },
+    { name: 'VERDE',    hex: '#33ff66' },
+    { name: 'AMARILLO', hex: '#ffee33' }
+];
+const MIRROR_WORDS = ['AURA', 'FUEGO', 'PODER', 'PODEROSO', 'RAYO', 'LLAMA', 'DRAGON'];
+let lastMirror = '';
+
+/* ---- Reto especial de donación (una vez por partida, cerca de los 30 de Aura) ---- */
+const PATREON_URL = 'https://www.patreon.com/c/MartinKimn/membership';
+
+function shouldOfferDonation() {
+    return !donationOffered && !donor && aura >= 28 && aura < 40;
+}
+
+function unlockDonorMedal() {
+    donor = true;
+    store('auraDonor', '1');
+    donorMedal.classList.add('show');
+}
+
+const DONATION_CHALLENGE = {
+    run(zone, r) {
+        setPrompt(
+            '⭐ ¡Has alcanzado el umbral del Rango Oro! ¿Quieres apoyar a MartinKimn en Patreon?',
+            'Si dices que sí: +25 Aura y medalla permanente'
+        );
+        const yes = makeButton(zone, 'Sí (Ir a Patreon)', () => {
+            Sound.click();
+            window.open(PATREON_URL, '_blank', 'noopener,noreferrer');
+            unlockDonorMedal();
+            r.win(25, '+25 AURA SUPREMA & ¡MEDALLA DESBLOQUEADA!');
+        });
+        yes.classList.add('btn-yes');
+
+        const no = makeButton(zone, 'No', () => {
+            Sound.click();
+            yes.disabled = no.disabled = true;
+            setPrompt('¡Gracias igual!');
+            r.after(1200, () => r.win(1, '+1 Aura por jugar'));
+        });
+        no.classList.add('btn-no');
+    }
+};
+
+const CHALLENGES = [
+    /* 1. Cinco clics */
+    {
+        name: 'Clics',
+        run(zone, r) {
+            let left = 5;
+            setPrompt('Haz 5 clics en el botón');
+            const btn = makeButton(zone, `Clics restantes: ${left}`, () => {
+                Sound.click();
+                left--;
+                if (left <= 0) r.win(1);
+                else btn.textContent = `Clics restantes: ${left}`;
+            });
+        }
+    },
+
+    /* 2. Animal con D */
+    {
+        name: 'Animal con D',
+        run(zone, r) {
+            setPrompt('Escribe un animal que empiece con D (Ej: Delfín)', 'Pulsa Enter para confirmar');
+            const input = makeInput(zone, 'Escribe aquí...');
+            onSubmit(r, input, raw => {
+                const v = norm(raw);
+                if (!/^d[a-z ]{2,}$/.test(v)) return r.lose('Eso no es un animal que empiece con D.');
+                let pts = 1, msg = '+1 Aura';
+                if (v !== 'delfin') {
+                    pts = 2; msg = '+2 Aura (¡Original!)';
+                    if (lastAnimal && v !== lastAnimal) { pts = 3; msg = '+3 Aura (¡Novedoso y creativo!)'; }
+                }
+                lastAnimal = v;
+                store('auraLastAnimal', v);
+                r.win(pts, msg);
+            });
+        }
+    },
+
+    /* 3. Barra espaciadora con margen de gracia */
+    {
+        name: 'Paciencia',
+        run(zone, r) {
+            const GOAL = 4, LIMIT = 6;
+            setPrompt('Mantén presionada la Barra Espaciadora durante 4 s', 'Margen de gracia hasta los 6 s · también vale mantener pulsada la barra');
+            const bar = div('hold-bar'), fill = div('hold-fill');
+            bar.append(fill, div('hold-zone'));
+            zone.appendChild(bar);
+
+            let holding = false, t0 = 0, raf = 0, lastSec = -1;
+            r.cleanups.push(() => cancelAnimationFrame(raf));
+
+            const frame = () => {
+                const t = (performance.now() - t0) / 1000;
+                fill.style.transform = `scaleX(${Math.min(t / LIMIT, 1)})`;
+                if (t < GOAL) {
+                    setText(promptMain, `Cargando Aura... ${(GOAL - t).toFixed(1)} s`);
+                    setText(promptSub, 'Mantén presionado... ¡No sueltes todavía!');
+                    const s = Math.floor(t);
+                    if (s !== lastSec) { lastSec = s; Sound.tick(); }
+                } else if (t <= LIMIT) {
+                    if (!bar.classList.contains('ok')) { bar.classList.add('ok'); promptMain.classList.add('go'); Sound.ping(); }
+                    setText(promptMain, '¡SUÉLTALO AHORA!');
+                    setText(promptSub, `Zona de éxito · suelta antes de que pasen ${(LIMIT - t).toFixed(1)} s`);
+                } else {
+                    holding = false;
+                    r.lose('Te pasaste de los 6 segundos.');
+                    return;
+                }
+                raf = requestAnimationFrame(frame);
+            };
+            const press = () => {
+                if (holding) return;
+                holding = true; t0 = performance.now(); lastSec = -1;
+                raf = requestAnimationFrame(frame);
+            };
+            const release = () => {
+                if (!holding) return;
+                holding = false;
+                cancelAnimationFrame(raf);
+                const t = (performance.now() - t0) / 1000;
+                if (t < GOAL) r.lose('Soltaste la barra antes de los 4 segundos.');
+                else if (t > LIMIT) r.lose('Te pasaste de los 6 segundos.');
+                else r.win(1);
+            };
+
+            r.on(window, 'keydown', e => {
+                if (e.code !== 'Space') return;
+                e.preventDefault();
+                if (!e.repeat) press();
+            });
+            r.on(window, 'keyup', e => {
+                if (e.code !== 'Space') return;
+                e.preventDefault();
+                release();
+            });
+            r.on(bar, 'pointerdown', e => { e.preventDefault(); press(); });
+            r.on(window, 'pointerup', release);
+            r.on(window, 'pointercancel', release);
+            r.on(window, 'blur', () => {
+                if (!holding) return;
+                holding = false;
+                cancelAnimationFrame(raf);
+                r.lose('La ventana perdió el foco.');
+            });
+        }
+    },
+
+    /* 4. Hora exacta */
+    {
+        name: 'Hora exacta',
+        run(zone, r) {
+            const fmt = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            const startMinute = fmt(new Date());
+            setPrompt('Escribe la HORA EXACTA actual (HH:MM, 24 h. Ej: 14:30)', 'Pulsa Enter para confirmar');
+            const input = makeInput(zone, 'HH:MM', 5);
+            onSubmit(r, input, raw => {
+                const v = raw.trim();
+                const now = fmt(new Date());
+                // Se acepta el minuto actual o el que había al empezar a escribir
+                if (v === now || v === startMinute) r.win(1, '¡Hora exacta!');
+                else r.lose(`La hora correcta era ${now}.`);
+            });
+        }
+    },
+
+    /* 5. Reflejos: cualquier tecla */
+    {
+        name: 'Reflejos',
+        run(zone, r) {
+            setPrompt('¡Presiona CUALQUIER tecla antes de que se acabe el tiempo!', 'También vale tocar la pantalla');
+            r.timer(5, { grow: true });
+            let armed = false;
+            r.after(250, () => { armed = true; }); // ignora teclas arrastradas del reto anterior
+            r.on(window, 'keydown', e => { if (armed && !e.repeat) r.win(1); });
+            r.on(window, 'pointerdown', () => { if (armed) r.win(1); });
+        }
+    },
+
+    /* 6. Color correcto */
+    {
+        name: 'Color correcto',
+        run(zone, r) {
+            const target = pick(COLORS);
+            setPrompt(`¡Haz clic en el botón de color ${target.name}!`);
+            r.timer(4);
+            shuffle(COLORS.slice()).forEach(c => {
+                const b = document.createElement('button');
+                b.className = 'color-btn';
+                b.style.backgroundColor = c.hex;
+                b.setAttribute('aria-label', c.name);
+                b.addEventListener('click', () => {
+                    if (c === target) r.win(1);
+                    else r.lose(`Ese era el ${c.name}, no el ${target.name}.`);
+                });
+                zone.appendChild(b);
+            });
+        }
+    },
+
+    /* 7. Tecleo espejo */
+    {
+        name: 'Tecleo espejo',
+        run(zone, r) {
+            let word;
+            do { word = pick(MIRROR_WORDS); } while (word === lastMirror);
+            lastMirror = word;
+            const reversed = word.split('').reverse().join('');
+            setPrompt(`Escribe la palabra "${word}" AL REVÉS`, 'Pulsa Enter para confirmar');
+            r.timer(6);
+            const input = makeInput(zone, 'Escribe al revés...');
+            onSubmit(r, input, raw => {
+                if (norm(raw) === reversed.toLowerCase()) r.win(1);
+                else r.lose(`Lo correcto era ${reversed}.`);
+            });
+        }
+    },
+
+    /* 8. Matemática arcana */
+    {
+        name: 'Matemática arcana',
+        run(zone, r) {
+            const a = rand(5, 14), b = rand(1, Math.min(10, a));
+            const add = Math.random() < 0.5;
+            const answer = add ? a + b : a - b;
+            setPrompt(`Resuelve la ecuación arcana: ${a} ${add ? '+' : '−'} ${b} = ?`, 'Pulsa Enter para confirmar');
+            r.timer(5);
+            const input = makeInput(zone, 'Resultado...', 4);
+            onSubmit(r, input, raw => {
+                const s = raw.trim();
+                if (/^-?\d+$/.test(s) && Number(s) === answer) r.win(1);
+                else r.lose(`La respuesta era ${answer}.`);
+            });
+        }
+    },
+
+    /* 9. Letra prohibida */
+    {
+        name: 'Letra prohibida',
+        run(zone, r) {
+            const forbidden = pick(['E', 'A', 'O']);
+            setPrompt(`Escribe una palabra (o tu nombre) SIN usar la letra "${forbidden}"`, 'Pulsa Enter para confirmar');
+            r.timer(6);
+            const input = makeInput(zone, `Sin la letra ${forbidden}...`);
+            onSubmit(r, input, raw => {
+                const v = norm(raw);
+                const letters = v.replace(/[^a-z]/g, '');
+                const valid = /^[a-z ]+$/.test(v) && letters.length >= 3 && new Set(letters).size >= 2;
+                if (!valid) return r.lose('Eso no cuenta como una palabra válida.');
+                if (v.includes(forbidden.toLowerCase())) return r.lose(`Usaste la letra prohibida "${forbidden}".`);
+                r.win(1);
+            });
+        }
+    },
+
+    /* 10. Spam furioso de clics */
+    {
+        name: 'Clics furiosos',
+        run(zone, r) {
+            let left = 12;
+            setPrompt(`¡LIBERA TU AURA! Clics restantes: ${left}`);
+            r.timer(5);
+            const btn = makeButton(zone, `¡Haz Clic Furioso! (${left})`, () => {
+                Sound.click();
+                left--;
+                if (left <= 0) return r.win(1);
+                setText(promptMain, `¡LIBERA TU AURA! Clics restantes: ${left}`);
+                btn.textContent = `¡Haz Clic Furioso! (${left})`;
+            });
+        }
+    }
+];
+
+/* =====================================================================
+   INICIO
+   ===================================================================== */
+applyRank(true);
+if (donor) donorMedal.classList.add('show');
+requestAnimationFrame(t => { lastFrame = t; fireLoop(t); });
+nextChallenge();
+</script>
+</body>
+</html>
