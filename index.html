@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0d0a14">
-<title>Contador de Aura RPG - 10 Retos</title>
+<title>Contador de Aura RPG - 21 Retos</title>
 <style>
 :root {
     --rank: #a0a0a0;
@@ -38,6 +38,26 @@ h1.title {
     background: rgba(0, 0, 0, 0.6);
     border: 2px solid var(--rank); color: var(--rank); box-shadow: 0 0 15px var(--rank);
     transition: border-color .5s, color .5s, box-shadow .5s;
+}
+
+/* ---------- Esquinas: Máx Aura (izq.) y Medalla de donador (der.) ---------- */
+.max-aura-display {
+    position: fixed; top: 14px; left: 16px; z-index: 20;
+    background: rgba(20, 15, 30, .85); color: #00ffaa; padding: 8px 16px; border-radius: 20px;
+    font-weight: 800; font-size: .95rem; text-transform: uppercase;
+    border: 2px solid #00ffaa; box-shadow: 0 0 12px rgba(0, 255, 170, .3);
+}
+.donor-medal {
+    position: fixed; top: 14px; right: 16px; z-index: 20; display: none;
+    background: linear-gradient(135deg, #ffd700, #ff8800); color: #000;
+    padding: 8px 16px; border-radius: 20px; border: 2px solid #fff;
+    font-weight: 900; font-size: .95rem; text-transform: uppercase;
+    box-shadow: 0 0 15px #ffd700; animation: medalGlow 1.5s infinite alternate;
+}
+.donor-medal.show { display: block; }
+@keyframes medalGlow {
+    from { box-shadow: 0 0 10px #ffd700; transform: scale(1); }
+    to   { box-shadow: 0 0 25px #ffaa00; transform: scale(1.05); }
 }
 
 /* ---------- Escenario (fuego + aura + temporizador) ---------- */
@@ -103,6 +123,7 @@ h1.title {
 .prompt-main { font-size: clamp(1.05rem, 4vw, 1.3rem); }
 .prompt-main.go { color: #00ff66; font-weight: 900; font-size: 1.5rem; text-shadow: 0 0 15px #00ff66; }
 .prompt-main.fail-title { color: #ff4444; font-weight: 900; text-shadow: 0 0 15px #f00; }
+.prompt-main.big { font-size: 2.4rem; font-weight: 900; letter-spacing: 8px; color: #ffe066; text-shadow: 0 0 15px #ff9900; }
 .hint { font-size: .88rem; opacity: .75; font-weight: 400; }
 .prompt-main.go + .hint { opacity: 1; }
 
@@ -110,6 +131,7 @@ h1.title {
     min-height: 80px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
 }
 .interactive-zone.frozen { pointer-events: none; opacity: .6; }
+.emoji-board { flex-basis: 100%; font-size: 1.8rem; line-height: 1.5; word-spacing: 4px; }
 
 .btn-challenge {
     background: linear-gradient(135deg, #ff8800, #ff2200); border: 2px solid #ffe600; color: #fff;
@@ -117,11 +139,16 @@ h1.title {
     box-shadow: 0 4px 15px rgba(255, 34, 0, .4); transition: transform .1s;
 }
 .btn-challenge:active { transform: scale(.95); }
+.btn-challenge:disabled { opacity: .6; cursor: default; }
+.btn-yes { background: linear-gradient(135deg, #00ff88, #00aa44); border-color: #fff; }
+.btn-no  { background: linear-gradient(135deg, #ff3333, #aa0000); border-color: #fff; }
 .color-btn {
     width: 66px; height: 66px; border-radius: 10px; border: 3px solid #fff; cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, .5); transition: transform .1s;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .5); transition: transform .1s, filter .1s, box-shadow .1s;
 }
 .color-btn:active { transform: scale(.9); }
+.color-btn:disabled { cursor: default; }
+.color-btn.lit { filter: brightness(1.9); transform: scale(1.14); box-shadow: 0 0 28px #fff; }
 button:focus-visible, input:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 input[type="text"] {
     background: rgba(0, 0, 0, .7); border: 2px solid var(--rank); color: #fff; padding: 10px 15px;
@@ -129,10 +156,10 @@ input[type="text"] {
     width: 80%; max-width: 300px; user-select: text; -webkit-user-select: text;
 }
 
-/* Barra de mantener presionado */
+/* Medidor de tiempo (parada segura / pulso firme) */
 .hold-bar {
-    position: relative; width: min(85%, 420px); height: 28px; overflow: hidden; cursor: pointer;
-    background: rgba(0, 0, 0, .6); border: 2px solid #555; border-radius: 14px; touch-action: none;
+    position: relative; width: min(85%, 420px); height: 28px; overflow: hidden;
+    background: rgba(0, 0, 0, .6); border: 2px solid #555; border-radius: 14px;
     transition: border-color .2s, box-shadow .2s;
 }
 .hold-bar.ok { border-color: #00ff66; box-shadow: 0 0 22px #00ff66; }
@@ -142,37 +169,17 @@ input[type="text"] {
 }
 .hold-bar.ok .hold-fill { background: linear-gradient(90deg, #00ff88, #00ffcc); }
 .hold-zone {
-    position: absolute; top: 0; bottom: 0; left: 66.667%; right: 0; pointer-events: none;
+    position: absolute; top: 0; bottom: 0; right: 0; pointer-events: none;
     background: rgba(0, 255, 100, .3); border-left: 2px dashed #00ff66;
 }
 .hold-bar.ok .hold-zone { background: rgba(0, 255, 100, .55); }
-
-/* Medalla de donador (esquina superior derecha) */
-.donor-medal {
-    position: fixed; top: 14px; right: 16px; z-index: 20; display: none;
-    background: linear-gradient(135deg, #ffd700, #ff8800); color: #000;
-    padding: 8px 16px; border-radius: 20px; border: 2px solid #fff;
-    font-weight: 900; font-size: .95rem; text-transform: uppercase;
-    box-shadow: 0 0 15px #ffd700; animation: medalGlow 1.5s infinite alternate;
-}
-.donor-medal.show { display: block; }
-@keyframes medalGlow {
-    from { box-shadow: 0 0 10px #ffd700; transform: scale(1); }
-    to   { box-shadow: 0 0 25px #ffaa00; transform: scale(1.05); }
-}
-.btn-yes { background: linear-gradient(135deg, #00ff88, #00aa44); border-color: #fff; }
-.btn-no  { background: linear-gradient(135deg, #ff3333, #aa0000); border-color: #fff; }
-.btn-challenge:disabled { opacity: .6; cursor: default; }
-@media (max-width: 640px) {
-    .donor-medal { top: 6px; right: 6px; padding: 4px 10px; font-size: .7rem; }
-}
-@media (prefers-reduced-motion: reduce) { .donor-medal { animation: none; } }
 
 /* Aviso flotante de bonus */
 .bonus-toast {
     position: absolute; left: 50%; top: -10px; transform: translate(-50%, -60%);
     background: #00ffaa; color: #000; font-weight: bold; padding: 5px 15px; border-radius: 20px;
-    box-shadow: 0 0 15px #00ffaa; opacity: 0; pointer-events: none; width: max-content; max-width: 88vw; text-align: center;
+    box-shadow: 0 0 15px #00ffaa; opacity: 0; pointer-events: none;
+    width: max-content; max-width: 88vw; text-align: center;
     transition: opacity .3s, transform .3s;
 }
 .bonus-toast.show { opacity: 1; transform: translate(-50%, -110%); }
@@ -183,8 +190,14 @@ input[type="text"] {
     .rpg-panel { padding: 12px; }
     .challenge-text { min-height: 52px; }
 }
+@media (max-width: 640px) {
+    .max-aura-display, .donor-medal { top: 6px; padding: 4px 10px; font-size: .7rem; }
+    .max-aura-display { left: 6px; }
+    .donor-medal { right: 6px; }
+    header { margin-top: 38px; }
+}
 @media (prefers-reduced-motion: reduce) {
-    h1.title, .timer-display.danger #timerValue { animation: none; }
+    h1.title, .donor-medal, .timer-display.danger #timerValue { animation: none; }
 }
 </style>
 </head>
@@ -195,6 +208,7 @@ input[type="text"] {
     <div id="rankBadge" class="rank-badge">Rango: Hierro</div>
 </header>
 
+<div id="maxAuraDisplay" class="max-aura-display">🏆 Máx Aura: 0</div>
 <div id="donorMedal" class="donor-medal">🛡️ Donador con Aura</div>
 
 <main class="stage" id="stage">
@@ -234,7 +248,7 @@ const stage = $('stage'), canvas = $('fireCanvas'), scoreEl = $('auraScore'),
       badgeEl = $('rankBadge'), toastEl = $('bonusToast'), challengeBadge = $('challengeBadge'),
       promptMain = $('promptMain'), promptSub = $('promptSub'), zoneEl = $('interactiveZone'),
       timerEl = $('timerDisplay'), timerScale = $('timerScale'), timerValue = $('timerValue'),
-      donorMedal = $('donorMedal');
+      maxEl = $('maxAuraDisplay'), donorMedal = $('donorMedal');
 
 const setText = (el, t) => { if (el.textContent !== t) el.textContent = t; };
 const rand = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
@@ -256,7 +270,7 @@ function store(key, value) {
 }
 
 /* =====================================================================
-   AUDIO (Web Audio API) - el contexto se crea en la primera interacción
+   AUDIO (Web Audio API): el contexto se crea en la primera interacción
    ===================================================================== */
 const Sound = (() => {
     let ac = null;
@@ -432,16 +446,22 @@ function fireLoop(now) {
 /* =====================================================================
    ESTADO Y UI
    ===================================================================== */
+const ANIMAL_KEYS = { d: 'auraLastAnimal', m: 'auraLastAnimalM' };
+const lastAnimals = { d: store(ANIMAL_KEYS.d), m: store(ANIMAL_KEYS.m) };
+
 let aura = 0;
+let maxAura = Number(store('auraMax')) || 0;
 let rankIdx = -1;
-let phase = 'playing';        // playing | transition | over
-let index = -1;
 let run = null;
-let lastAnimal = store('auraLastAnimal');
+let challengeNumber = 0;
 let donor = store('auraDonor') === '1';   // medalla permanente (se guarda en el navegador)
 let donationOffered = false;              // el reto de donación sale una vez por partida
 let toastTimer = 0;
 const TRANSITION_MS = 750;
+
+/* Memoria anti-repetición: un reto no vuelve hasta que pasen RECENT_LIMIT retos distintos */
+const RECENT_LIMIT = 7;
+let recentChallenges = [];
 
 function rankIndexFor(a) {
     let idx = 0;
@@ -464,6 +484,16 @@ function applyRank(force = false) {
     }
 }
 
+function updateMaxAura() {
+    if (aura <= maxAura) return;
+    maxAura = aura;
+    store('auraMax', String(maxAura));
+    setText(maxEl, `🏆 Máx Aura: ${maxAura}`);
+    if (!reduceMotion) {
+        maxEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.2)' }, { transform: 'scale(1)' }], { duration: 400 });
+    }
+}
+
 function setPrompt(main, sub = '') {
     promptMain.className = 'prompt-main';
     promptSub.className = 'hint';
@@ -475,7 +505,7 @@ function toast(msg) {
     toastEl.textContent = msg;
     toastEl.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2000);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
 }
 
 function floatText(text) {
@@ -567,7 +597,6 @@ function startTimer(r, seconds, { grow = false } = {}) {
 }
 
 function handleWin(points, msg) {
-    phase = 'transition';
     zoneEl.classList.add('frozen');
     zoneEl.querySelectorAll('input, button').forEach(el => { el.disabled = true; });
     Sound.success();
@@ -577,6 +606,7 @@ function handleWin(points, msg) {
     bumpScore();
     floatText(`+${points} AURA`);
     if (msg) toast(msg);
+    updateMaxAura();
 
     fire.boostUntil = performance.now() + 700;
     if (!reduceMotion) {
@@ -587,7 +617,6 @@ function handleWin(points, msg) {
 }
 
 function handleLose(reason) {
-    phase = 'over';
     run = null;
     Sound.fail();
     if (!reduceMotion) {
@@ -620,20 +649,32 @@ function handleLose(reason) {
 function restart() {
     aura = 0;
     donationOffered = false;
+    recentChallenges = [];
+    challengeNumber = 0;
     setText(scoreEl, '0');
     applyRank(true);
-    index = -1;
     nextChallenge();
+}
+
+/* Elige el siguiente reto evitando los últimos RECENT_LIMIT */
+function pickChallengeIndex() {
+    if (recentChallenges.length === 0) return 0; // la partida siempre abre con el reto de clics
+    const pool = [];
+    for (let i = 0; i < CHALLENGES.length; i++) if (!recentChallenges.includes(i)) pool.push(i);
+    return pick(pool);
+}
+function rememberChallenge(i) {
+    recentChallenges.push(i);
+    if (recentChallenges.length > RECENT_LIMIT) recentChallenges.shift();
 }
 
 function nextChallenge() {
     if (run) run.dispose();
     zoneEl.classList.remove('frozen');
     zoneEl.replaceChildren();
-    phase = 'playing';
     run = createRun();
 
-    // Reto especial: no avanza la rotación normal
+    // Reto especial de donación: no cuenta en el historial ni en la numeración
     if (shouldOfferDonation()) {
         donationOffered = true;
         challengeBadge.textContent = 'RETO ESPECIAL · APOYO';
@@ -641,10 +682,11 @@ function nextChallenge() {
         return;
     }
 
-    index = (index + 1) % CHALLENGES.length;
-    const c = CHALLENGES[index];
-    challengeBadge.textContent = `RETO ${index + 1}/${CHALLENGES.length} · ${c.name}`;
-    c.run(zoneEl, run);
+    const i = pickChallengeIndex();
+    rememberChallenge(i);
+    challengeNumber++;
+    challengeBadge.textContent = `RETO ${challengeNumber} · ${CHALLENGES[i].name}`;
+    CHALLENGES[i].run(zoneEl, run);
 }
 
 /* =====================================================================
@@ -661,7 +703,7 @@ function makeButton(zone, label, onClick) {
     return b;
 }
 
-function makeInput(zone, placeholder, maxLength) {
+function makeInput(zone, placeholder, maxLength, inputMode) {
     const i = document.createElement('input');
     i.type = 'text';
     i.placeholder = placeholder;
@@ -670,6 +712,7 @@ function makeInput(zone, placeholder, maxLength) {
     i.spellcheck = false;
     i.enterKeyHint = 'send';
     if (maxLength) i.maxLength = maxLength;
+    if (inputMode) i.inputMode = inputMode;
     zone.appendChild(i);
     i.focus({ preventScroll: true });
     return i;
@@ -684,8 +727,28 @@ function onSubmit(r, input, fn) {
     });
 }
 
+/* Medidor con zona verde: de 0 a "limit" segundos, la zona segura empieza en "goal" */
+function createGauge(zone, goal, limit) {
+    const bar = div('hold-bar'), fill = div('hold-fill'), safe = div('hold-zone');
+    safe.style.left = `${(goal / limit) * 100}%`;
+    bar.append(fill, safe);
+    zone.appendChild(bar);
+    return {
+        update(t) {
+            fill.style.transform = `scaleX(${Math.min(t / limit, 1)})`;
+            const phase = t < goal ? 'charging' : (t <= limit ? 'ok' : 'over');
+            if (phase === 'ok' && !bar.classList.contains('ok')) {
+                bar.classList.add('ok');
+                promptMain.classList.add('go');
+                Sound.ping();
+            }
+            return phase;
+        }
+    };
+}
+
 /* =====================================================================
-   LOS 10 RETOS
+   DATOS Y FÁBRICAS DE RETOS
    ===================================================================== */
 const COLORS = [
     { name: 'ROJO',     hex: '#ff3333' },
@@ -694,7 +757,67 @@ const COLORS = [
     { name: 'AMARILLO', hex: '#ffee33' }
 ];
 const MIRROR_WORDS = ['AURA', 'FUEGO', 'PODER', 'PODEROSO', 'RAYO', 'LLAMA', 'DRAGON'];
+const ANAGRAM_WORDS = ['FUEGO', 'LLAMA', 'PODER', 'DRAGON', 'MAGIA', 'ESPADA', 'ESCUDO', 'AURA'];
+const DAYS = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+const RIDDLES = [
+    { q: 'Tengo agujas y no sé coser, tengo números y no sé leer. ¿Qué soy?', options: ['El reloj', 'La brújula', 'El calendario'], answer: 'El reloj' },
+    { q: 'Blanca por dentro, verde por fuera. Si quieres que te lo diga, espera.', options: ['La pera', 'La manzana', 'La sandía'], answer: 'La pera' },
+    { q: 'Vuelo sin alas, lloro sin ojos. ¿Qué soy?', options: ['La nube', 'El viento', 'La niebla'], answer: 'La nube' },
+    { q: 'Cuanto más seca, más moja. ¿Qué es?', options: ['La toalla', 'La esponja', 'La lluvia'], answer: 'La toalla' },
+    { q: 'Oro parece, plata no es. ¿Qué es?', options: ['El plátano', 'El limón', 'La naranja'], answer: 'El plátano' }
+];
 let lastMirror = '';
+
+/* Animal con una letra dada (D o M): +1 ejemplo, +2 original, +3 si además cambia respecto a la última vez */
+function animalChallenge(letter, example) {
+    const L = letter.toUpperCase();
+    const re = new RegExp(`^${letter}[a-z ]{2,}$`);
+    return {
+        name: `Animal con ${L}`,
+        run(zone, r) {
+            setPrompt(`Escribe un animal que empiece con ${L} (Ej: ${example.label})`, 'Pulsa Enter para confirmar');
+            const input = makeInput(zone, 'Escribe aquí...');
+            onSubmit(r, input, raw => {
+                const v = norm(raw);
+                if (!re.test(v)) return r.lose(`Eso no es un animal que empiece con ${L}.`);
+                let pts = 1, msg = '+1 Aura';
+                if (v !== example.key) {
+                    pts = 2; msg = '+2 Aura (¡Original!)';
+                    if (lastAnimals[letter] && v !== lastAnimals[letter]) { pts = 3; msg = '+3 Aura (¡Novedoso y creativo!)'; }
+                }
+                lastAnimals[letter] = v;
+                store(ANIMAL_KEYS[letter], v);
+                r.win(pts, msg);
+            });
+        }
+    };
+}
+
+/* Color: elegir el indicado (inverse = false) o cualquiera distinto (inverse = true) */
+function colorChallenge(inverse) {
+    return {
+        name: inverse ? 'Color inverso' : 'Color correcto',
+        run(zone, r) {
+            const target = pick(COLORS);
+            setPrompt(inverse
+                ? `¡Haz clic en un color DISTINTO a ${target.name}!`
+                : `¡Haz clic en el botón de color ${target.name}!`);
+            r.timer(4);
+            shuffle(COLORS.slice()).forEach(c => {
+                const b = document.createElement('button');
+                b.className = 'color-btn';
+                b.style.backgroundColor = c.hex;
+                b.setAttribute('aria-label', c.name);
+                b.addEventListener('click', () => {
+                    const ok = inverse ? c !== target : c === target;
+                    if (ok) r.win(1);
+                    else r.lose(inverse ? `Elegiste justo el ${target.name}.` : `Ese era el ${c.name}, no el ${target.name}.`);
+                });
+                zone.appendChild(b);
+            });
+        }
+    };
+}
 
 /* ---- Reto especial de donación (una vez por partida, cerca de los 30 de Aura) ---- */
 const PATREON_URL = 'https://www.patreon.com/c/MartinKimn/membership';
@@ -726,13 +849,16 @@ const DONATION_CHALLENGE = {
         const no = makeButton(zone, 'No', () => {
             Sound.click();
             yes.disabled = no.disabled = true;
-            setPrompt('¡Gracias igual!');
+            setPrompt('¡Gracias igual por jugar!');
             r.after(1200, () => r.win(1, '+1 Aura por jugar'));
         });
         no.classList.add('btn-no');
     }
 };
 
+/* =====================================================================
+   LOS 21 RETOS (ninguno usa la barra espaciadora)
+   ===================================================================== */
 const CHALLENGES = [
     /* 1. Cinco clics */
     {
@@ -750,94 +876,10 @@ const CHALLENGES = [
     },
 
     /* 2. Animal con D */
-    {
-        name: 'Animal con D',
-        run(zone, r) {
-            setPrompt('Escribe un animal que empiece con D (Ej: Delfín)', 'Pulsa Enter para confirmar');
-            const input = makeInput(zone, 'Escribe aquí...');
-            onSubmit(r, input, raw => {
-                const v = norm(raw);
-                if (!/^d[a-z ]{2,}$/.test(v)) return r.lose('Eso no es un animal que empiece con D.');
-                let pts = 1, msg = '+1 Aura';
-                if (v !== 'delfin') {
-                    pts = 2; msg = '+2 Aura (¡Original!)';
-                    if (lastAnimal && v !== lastAnimal) { pts = 3; msg = '+3 Aura (¡Novedoso y creativo!)'; }
-                }
-                lastAnimal = v;
-                store('auraLastAnimal', v);
-                r.win(pts, msg);
-            });
-        }
-    },
+    animalChallenge('d', { label: 'Delfín', key: 'delfin' }),
 
-    /* 3. Barra espaciadora con margen de gracia */
-    {
-        name: 'Paciencia',
-        run(zone, r) {
-            const GOAL = 4, LIMIT = 6;
-            setPrompt('Mantén presionada la Barra Espaciadora durante 4 s', 'Margen de gracia hasta los 6 s · también vale mantener pulsada la barra');
-            const bar = div('hold-bar'), fill = div('hold-fill');
-            bar.append(fill, div('hold-zone'));
-            zone.appendChild(bar);
-
-            let holding = false, t0 = 0, raf = 0, lastSec = -1;
-            r.cleanups.push(() => cancelAnimationFrame(raf));
-
-            const frame = () => {
-                const t = (performance.now() - t0) / 1000;
-                fill.style.transform = `scaleX(${Math.min(t / LIMIT, 1)})`;
-                if (t < GOAL) {
-                    setText(promptMain, `Cargando Aura... ${(GOAL - t).toFixed(1)} s`);
-                    setText(promptSub, 'Mantén presionado... ¡No sueltes todavía!');
-                    const s = Math.floor(t);
-                    if (s !== lastSec) { lastSec = s; Sound.tick(); }
-                } else if (t <= LIMIT) {
-                    if (!bar.classList.contains('ok')) { bar.classList.add('ok'); promptMain.classList.add('go'); Sound.ping(); }
-                    setText(promptMain, '¡SUÉLTALO AHORA!');
-                    setText(promptSub, `Zona de éxito · suelta antes de que pasen ${(LIMIT - t).toFixed(1)} s`);
-                } else {
-                    holding = false;
-                    r.lose('Te pasaste de los 6 segundos.');
-                    return;
-                }
-                raf = requestAnimationFrame(frame);
-            };
-            const press = () => {
-                if (holding) return;
-                holding = true; t0 = performance.now(); lastSec = -1;
-                raf = requestAnimationFrame(frame);
-            };
-            const release = () => {
-                if (!holding) return;
-                holding = false;
-                cancelAnimationFrame(raf);
-                const t = (performance.now() - t0) / 1000;
-                if (t < GOAL) r.lose('Soltaste la barra antes de los 4 segundos.');
-                else if (t > LIMIT) r.lose('Te pasaste de los 6 segundos.');
-                else r.win(1);
-            };
-
-            r.on(window, 'keydown', e => {
-                if (e.code !== 'Space') return;
-                e.preventDefault();
-                if (!e.repeat) press();
-            });
-            r.on(window, 'keyup', e => {
-                if (e.code !== 'Space') return;
-                e.preventDefault();
-                release();
-            });
-            r.on(bar, 'pointerdown', e => { e.preventDefault(); press(); });
-            r.on(window, 'pointerup', release);
-            r.on(window, 'pointercancel', release);
-            r.on(window, 'blur', () => {
-                if (!holding) return;
-                holding = false;
-                cancelAnimationFrame(raf);
-                r.lose('La ventana perdió el foco.');
-            });
-        }
-    },
+    /* 3. Animal con M */
+    animalChallenge('m', { label: 'Mono', key: 'mono' }),
 
     /* 4. Hora exacta */
     {
@@ -857,41 +899,26 @@ const CHALLENGES = [
         }
     },
 
-    /* 5. Reflejos: cualquier tecla */
+    /* 5. Reflejos: cualquier tecla (menos Espacio) o toque */
     {
         name: 'Reflejos',
         run(zone, r) {
-            setPrompt('¡Presiona CUALQUIER tecla antes de que se acabe el tiempo!', 'También vale tocar la pantalla');
+            setPrompt('¡Presiona CUALQUIER tecla (menos Espacio) antes de que se acabe el tiempo!', 'También vale tocar la pantalla');
             r.timer(5, { grow: true });
             let armed = false;
             r.after(250, () => { armed = true; }); // ignora teclas arrastradas del reto anterior
-            r.on(window, 'keydown', e => { if (armed && !e.repeat) r.win(1); });
+            r.on(window, 'keydown', e => { if (armed && !e.repeat && e.code !== 'Space') r.win(1); });
             r.on(window, 'pointerdown', () => { if (armed) r.win(1); });
         }
     },
 
     /* 6. Color correcto */
-    {
-        name: 'Color correcto',
-        run(zone, r) {
-            const target = pick(COLORS);
-            setPrompt(`¡Haz clic en el botón de color ${target.name}!`);
-            r.timer(4);
-            shuffle(COLORS.slice()).forEach(c => {
-                const b = document.createElement('button');
-                b.className = 'color-btn';
-                b.style.backgroundColor = c.hex;
-                b.setAttribute('aria-label', c.name);
-                b.addEventListener('click', () => {
-                    if (c === target) r.win(1);
-                    else r.lose(`Ese era el ${c.name}, no el ${target.name}.`);
-                });
-                zone.appendChild(b);
-            });
-        }
-    },
+    colorChallenge(false),
 
-    /* 7. Tecleo espejo */
+    /* 7. Color inverso */
+    colorChallenge(true),
+
+    /* 8. Tecleo espejo */
     {
         name: 'Tecleo espejo',
         run(zone, r) {
@@ -909,7 +936,7 @@ const CHALLENGES = [
         }
     },
 
-    /* 8. Matemática arcana */
+    /* 9. Matemática arcana */
     {
         name: 'Matemática arcana',
         run(zone, r) {
@@ -918,7 +945,7 @@ const CHALLENGES = [
             const answer = add ? a + b : a - b;
             setPrompt(`Resuelve la ecuación arcana: ${a} ${add ? '+' : '−'} ${b} = ?`, 'Pulsa Enter para confirmar');
             r.timer(5);
-            const input = makeInput(zone, 'Resultado...', 4);
+            const input = makeInput(zone, 'Resultado...', 4, 'numeric');
             onSubmit(r, input, raw => {
                 const s = raw.trim();
                 if (/^-?\d+$/.test(s) && Number(s) === answer) r.win(1);
@@ -927,7 +954,7 @@ const CHALLENGES = [
         }
     },
 
-    /* 9. Letra prohibida */
+    /* 10. Letra prohibida */
     {
         name: 'Letra prohibida',
         run(zone, r) {
@@ -946,7 +973,7 @@ const CHALLENGES = [
         }
     },
 
-    /* 10. Spam furioso de clics */
+    /* 11. Spam furioso de clics */
     {
         name: 'Clics furiosos',
         run(zone, r) {
@@ -961,14 +988,299 @@ const CHALLENGES = [
                 btn.textContent = `¡Haz Clic Furioso! (${left})`;
             });
         }
+    },
+
+    /* 12. Secuencia numérica */
+    {
+        name: 'Secuencia numérica',
+        run(zone, r) {
+            let terms;
+            const kind = rand(0, 2);
+            if (kind === 0) {            // suma constante
+                const s = rand(1, 9), d = rand(2, 7);
+                terms = Array.from({ length: 5 }, (_, i) => s + d * i);
+            } else if (kind === 1) {     // multiplicación constante
+                const s = rand(1, 3), m = pick([2, 3]);
+                terms = Array.from({ length: 5 }, (_, i) => s * Math.pow(m, i));
+            } else {                     // resta constante
+                const s = rand(40, 60), d = rand(3, 8);
+                terms = Array.from({ length: 5 }, (_, i) => s - d * i);
+            }
+            const answer = terms[4];
+            setPrompt(`Completa la secuencia: ${terms.slice(0, 4).join(', ')}, ?`, 'Pulsa Enter para confirmar');
+            r.timer(8);
+            const input = makeInput(zone, 'Siguiente número...', 4, 'numeric');
+            onSubmit(r, input, raw => {
+                const s = raw.trim();
+                if (/^-?\d+$/.test(s) && Number(s) === answer) r.win(1);
+                else r.lose(`El número correcto era ${answer}.`);
+            });
+        }
+    },
+
+    /* 13. Parada segura: pulsar PARAR dentro de la zona verde (4.0 - 6.0 s) */
+    {
+        name: 'Parada segura',
+        run(zone, r) {
+            const GOAL = 4, LIMIT = 6;
+            setPrompt('¡PARADA SEGURA! Pulsa PARAR cuando el contador esté en la zona verde', 'Zona segura: de 4.0 a 6.0 segundos');
+            const gauge = createGauge(zone, GOAL, LIMIT);
+            const t0 = performance.now();
+            let raf = 0;
+            r.cleanups.push(() => cancelAnimationFrame(raf));
+
+            const frame = () => {
+                const t = (performance.now() - t0) / 1000;
+                const phase = gauge.update(t);
+                if (phase === 'over') { r.lose('Te pasaste de los 6 segundos.'); return; }
+                if (phase === 'ok') {
+                    setText(promptMain, '¡PÁRALO AHORA!');
+                    setText(promptSub, `Zona de éxito · quedan ${(LIMIT - t).toFixed(1)} s`);
+                } else {
+                    setText(promptSub, `Contador: ${t.toFixed(1)} s`);
+                }
+                raf = requestAnimationFrame(frame);
+            };
+            raf = requestAnimationFrame(frame);
+
+            makeButton(zone, '¡PARAR!', () => {
+                const t = (performance.now() - t0) / 1000;
+                Sound.click();
+                if (t >= GOAL && t <= LIMIT) r.win(1);
+                else r.lose('Paraste antes de la zona verde.');
+            });
+        }
+    },
+
+    /* 14. Adivinanza (opción múltiple) */
+    {
+        name: 'Adivinanza',
+        run(zone, r) {
+            const riddle = pick(RIDDLES);
+            setPrompt(riddle.q, 'Elige la respuesta correcta');
+            r.timer(10);
+            shuffle(riddle.options.slice()).forEach(opt => {
+                makeButton(zone, opt, () => {
+                    Sound.click();
+                    if (opt === riddle.answer) r.win(1);
+                    else r.lose(`La respuesta era: ${riddle.answer}.`);
+                });
+            });
+        }
+    },
+
+    /* 15. Cuenta las llamas */
+    {
+        name: 'Cuenta las llamas',
+        run(zone, r) {
+            const total = 15, fires = rand(3, 8);
+            const cells = shuffle([
+                ...Array(fires).fill('🔥'),
+                ...Array.from({ length: total - fires }, () => pick(['💧', '⭐']))
+            ]);
+            setPrompt('¿Cuántas 🔥 hay?');
+            const board = div('emoji-board');
+            board.textContent = cells.join(' ');
+            zone.appendChild(board);
+            r.timer(7);
+
+            const options = new Set([fires]);
+            while (options.size < 4) {
+                const v = fires + rand(-3, 3);
+                if (v >= 1) options.add(v);
+            }
+            shuffle([...options]).forEach(n => {
+                makeButton(zone, String(n), () => {
+                    Sound.click();
+                    if (n === fires) r.win(1);
+                    else r.lose(`Había ${fires} llamas.`);
+                });
+            });
+        }
+    },
+
+    /* 16. Memoria numérica */
+    {
+        name: 'Memoria numérica',
+        run(zone, r) {
+            const n = String(rand(1000, 9999));
+            setPrompt(n, 'Memoriza este número (2 segundos)');
+            promptMain.classList.add('big');
+            r.after(2000, () => {
+                setPrompt('¿Cuál era el número?', 'Pulsa Enter para confirmar');
+                const input = makeInput(zone, '####', 4, 'numeric');
+                r.timer(6);
+                onSubmit(r, input, raw => {
+                    if (raw.trim() === n) r.win(1);
+                    else r.lose(`El número era ${n}.`);
+                });
+            });
+        }
+    },
+
+    /* 17. Anagrama */
+    {
+        name: 'Anagrama',
+        run(zone, r) {
+            const word = pick(ANAGRAM_WORDS);
+            let letters;
+            do { letters = shuffle(word.split('')); } while (letters.join('') === word);
+            setPrompt(`Ordena las letras: ${letters.join(' ')}`, 'Pulsa Enter para confirmar');
+            r.timer(8);
+            const input = makeInput(zone, 'La palabra es...');
+            onSubmit(r, input, raw => {
+                if (norm(raw) === word.toLowerCase()) r.win(1);
+                else r.lose(`La palabra era ${word}.`);
+            });
+        }
+    },
+
+    /* 18. Número mayor */
+    {
+        name: 'Número mayor',
+        run(zone, r) {
+            const nums = new Set();
+            while (nums.size < 4) nums.add(rand(10, 99));
+            const biggest = Math.max(...nums);
+            setPrompt('¡Haz clic en el número MAYOR!');
+            r.timer(4);
+            shuffle([...nums]).forEach(n => {
+                makeButton(zone, String(n), () => {
+                    Sound.click();
+                    if (n === biggest) r.win(1);
+                    else r.lose(`El mayor era el ${biggest}.`);
+                });
+            });
+        }
+    },
+
+    /* 19. Día de la semana */
+    {
+        name: 'Día de la semana',
+        run(zone, r) {
+            const startDay = DAYS[new Date().getDay()];
+            setPrompt('¿Qué día de la semana es HOY? (en español)', 'Pulsa Enter para confirmar');
+            r.timer(8);
+            const input = makeInput(zone, 'Ej: lunes');
+            onSubmit(r, input, raw => {
+                const v = norm(raw);
+                const today = DAYS[new Date().getDay()];
+                if (v === today || v === startDay) r.win(1);
+                else r.lose(`Hoy es ${today}.`);
+            });
+        }
+    },
+
+    /* 20. Simón: repetir la secuencia de colores */
+    {
+        name: 'Simón',
+        run(zone, r) {
+            const seq = Array.from({ length: 3 }, () => pick(COLORS));
+            setPrompt('Memoriza la secuencia de colores...', 'Mira con atención');
+            const pads = shuffle(COLORS.slice()).map(c => {
+                const b = document.createElement('button');
+                b.className = 'color-btn';
+                b.style.backgroundColor = c.hex;
+                b.setAttribute('aria-label', c.name);
+                b.disabled = true;
+                zone.appendChild(b);
+                return { c, b };
+            });
+            const padOf = c => pads.find(p => p.c === c).b;
+
+            const STEP = 800;
+            seq.forEach((c, i) => {
+                r.after(500 + i * STEP, () => { padOf(c).classList.add('lit'); Sound.ping(); });
+                r.after(500 + i * STEP + 450, () => padOf(c).classList.remove('lit'));
+            });
+
+            let ready = false, pos = 0;
+            r.after(500 + seq.length * STEP, () => {
+                ready = true;
+                pads.forEach(p => { p.b.disabled = false; });
+                setPrompt('¡Repite la secuencia!', 'Haz clic en el mismo orden');
+                r.timer(8);
+            });
+            pads.forEach(({ c, b }) => b.addEventListener('click', () => {
+                if (!ready) return;
+                Sound.click();
+                if (c !== seq[pos]) return r.lose('Te equivocaste en la secuencia.');
+                pos++;
+                if (pos === seq.length) r.win(1);
+            }));
+        }
+    },
+
+    /* 21. Pulso firme: mantener pulsado el botón (ratón/dedo), sin teclado global */
+    {
+        name: 'Pulso firme',
+        run(zone, r) {
+            const GOAL = 3, LIMIT = 5;
+            setPrompt('Mantén pulsado el botón durante 3 s', 'Margen de gracia: suéltalo en la zona verde (3 – 5 s)');
+            const gauge = createGauge(zone, GOAL, LIMIT);
+            const btn = document.createElement('button');
+            btn.className = 'btn-challenge';
+            btn.textContent = 'Mantén pulsado';
+            btn.style.touchAction = 'none';
+            zone.appendChild(btn);
+
+            let holding = false, t0 = 0, raf = 0;
+            r.cleanups.push(() => cancelAnimationFrame(raf));
+
+            const frame = () => {
+                const t = (performance.now() - t0) / 1000;
+                const phase = gauge.update(t);
+                if (phase === 'charging') {
+                    setText(promptMain, `Cargando Aura... ${(GOAL - t).toFixed(1)} s`);
+                    setText(promptSub, 'Mantén pulsado... ¡No sueltes todavía!');
+                } else if (phase === 'ok') {
+                    setText(promptMain, '¡SUÉLTALO AHORA!');
+                    setText(promptSub, `Zona de éxito · quedan ${(LIMIT - t).toFixed(1)} s`);
+                } else {
+                    holding = false;
+                    r.lose('Te pasaste de los 5 segundos.');
+                    return;
+                }
+                raf = requestAnimationFrame(frame);
+            };
+            const press = () => {
+                if (holding) return;
+                holding = true; t0 = performance.now();
+                raf = requestAnimationFrame(frame);
+            };
+            const release = () => {
+                if (!holding) return;
+                holding = false;
+                cancelAnimationFrame(raf);
+                const t = (performance.now() - t0) / 1000;
+                if (t < GOAL) r.lose('Soltaste antes de los 3 segundos.');
+                else if (t > LIMIT) r.lose('Te pasaste de los 5 segundos.');
+                else r.win(1);
+            };
+
+            r.on(btn, 'pointerdown', e => { e.preventDefault(); press(); });
+            r.on(window, 'pointerup', release);
+            r.on(window, 'pointercancel', release);
+            r.on(btn, 'contextmenu', e => e.preventDefault());
+            // Alternativa de teclado solo con Enter y solo sobre el botón (nada global)
+            r.on(btn, 'keydown', e => { if (e.key === 'Enter' && !e.repeat) { e.preventDefault(); press(); } });
+            r.on(btn, 'keyup', e => { if (e.key === 'Enter') { e.preventDefault(); release(); } });
+            r.on(window, 'blur', () => {
+                if (!holding) return;
+                holding = false;
+                cancelAnimationFrame(raf);
+                r.lose('La ventana perdió el foco.');
+            });
+        }
     }
 ];
 
 /* =====================================================================
    INICIO
    ===================================================================== */
-applyRank(true);
+setText(maxEl, `🏆 Máx Aura: ${maxAura}`);
 if (donor) donorMedal.classList.add('show');
+applyRank(true);
 requestAnimationFrame(t => { lastFrame = t; fireLoop(t); });
 nextChallenge();
 </script>
