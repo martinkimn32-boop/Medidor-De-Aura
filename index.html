@@ -322,7 +322,10 @@ input[type="text"] {
     <div class="modal-content">
         <div class="modal-title" id="rankingTitle">🏆 Top 10 Guerreros</div>
         <ul class="ranking-list" id="rankingList"></ul>
-        <button class="btn-challenge" id="closeRankingBtn">Cerrar</button>
+        <div class="modal-actions">
+            <button class="btn-challenge btn-yes" id="refreshRankingBtn">Actualizar</button>
+            <button class="btn-challenge" id="closeRankingBtn">Cerrar</button>
+        </div>
     </div>
 </div>
 
@@ -791,10 +794,10 @@ function handleLose(reason) {
         ], { duration: 500 });
     }
 
-    // ¿Esta partida merece entrar al ranking global?
+    // Cualquier partida con Aura se puede guardar en el ranking; el aviso automático solo sale si es récord
     const finalAura = aura;
     const qualifies = finalAura > 5 && finalAura >= maxAura;
-    pendingRecord = qualifies ? { aura: finalAura, rango: RANKS[rankIndexFor(finalAura)].name, ref: null } : null;
+    pendingRecord = finalAura > 0 ? { aura: finalAura, rango: RANKS[rankIndexFor(finalAura)].name, ref: null } : null;
 
     aura = 0;
     setText(scoreEl, '0');
@@ -818,10 +821,18 @@ function handleLose(reason) {
     ranking.textContent = '🏆 Ranking Global';
     ranking.onclick = openRanking;
     zoneEl.append(retry, ranking);
+    if (pendingRecord) {
+        const save = document.createElement('button');
+        save.className = 'btn-challenge btn-yes';
+        save.id = 'saveRunBtn';
+        save.textContent = '💾 Guardar mi Aura';
+        save.onclick = openSaveRecord;
+        zoneEl.append(save);
+    }
 
     // Se enfoca con retraso para que una tecla soltada justo ahora no lo active por accidente
     setTimeout(() => { if (retry.isConnected && !modalOpen()) retry.focus({ preventScroll: true }); }, 600);
-    if (pendingRecord) setTimeout(openSaveRecord, 900);
+    if (pendingRecord && qualifies) setTimeout(openSaveRecord, 900);
 }
 
 function restart() {
@@ -884,19 +895,30 @@ const firebaseConfig = {
     measurementId: "G-87G7DBD8B8"
 };
 
-let db = null, dbTried = false;
+let db = null, dbError = '';
 function getDb() {
-    if (db || dbTried) return db;
-    dbTried = true;
+    if (db) return db;
+    if (typeof firebase === 'undefined') {
+        // Las librerías (defer) aún no cargaron o están bloqueadas: se reintenta en la próxima consulta
+        dbError = 'No se cargaron las librerías de Firebase (¿sin internet o bloqueador de anuncios?).';
+        return null;
+    }
     try {
-        if (typeof firebase !== 'undefined') {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.database();
-        }
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        dbError = '';
     } catch (e) {
-        console.warn('Firebase no disponible:', e);
+        dbError = `Error al iniciar Firebase: ${e.message || e}`;
+        console.warn(dbError);
     }
     return db;
+}
+
+function describeDbError(e, action) {
+    const code = (e && (e.code || e.message)) || 'desconocido';
+    if (/permission/i.test(code)) return `No se pudo ${action}: Firebase rechazó el acceso (PERMISSION_DENIED). Revisa las reglas de tu Realtime Database.`;
+    if (code === 'timeout') return `No se pudo ${action}: Firebase tardó demasiado en responder. Revisa tu internet y que la base de datos exista.`;
+    return `No se pudo ${action} (${code}).`;
 }
 
 const withTimeout = (promise, ms = 8000) => Promise.race([
@@ -942,7 +964,7 @@ function rankingMessage(text) {
 let rankingRequest = 0;
 async function openRanking() {
     // Mientras hay un reto en marcha el tiempo corre: el ranking se consulta al perder
-    if (run) { toast('Podrás ver el ranking cuando termine tu partida'); return; }
+    if (run) { toast('El ranking se abre al perder (el tiempo no se detiene durante un reto)'); return; }
 
     const list = $('rankingList');
     const req = ++rankingRequest;
@@ -952,7 +974,10 @@ async function openRanking() {
 
     const database = getDb();
     if (!database) {
-        list.replaceChildren(rankingMessage(`Sin conexión con el ranking global. Tu mejor marca: ${maxAura} Aura (${RANKS[rangoMaxIdx].name}).`));
+        list.replaceChildren(
+            rankingMessage(dbError),
+            rankingMessage(`Tu mejor marca: ${maxAura} Aura (${RANKS[rangoMaxIdx].name}).`)
+        );
         return;
     }
     try {
@@ -969,7 +994,8 @@ async function openRanking() {
         rows.forEach((item, i) => list.append(rankingRow(i + 1, item)));
     } catch (e) {
         if (req !== rankingRequest) return;
-        list.replaceChildren(rankingMessage('No se pudo cargar el ranking. Revisa tu conexión e inténtalo de nuevo.'));
+        console.error('Ranking:', e);
+        list.replaceChildren(rankingMessage(describeDbError(e, 'cargar el ranking')));
     }
 }
 
@@ -985,8 +1011,7 @@ function openSaveRecord() {
 }
 
 function skipRecord() {
-    pendingRecord = null;
-    closeModal('saveRecordModal');
+    closeModal('saveRecordModal'); // el botón "Guardar mi Aura" sigue disponible hasta reintentar
 }
 
 const cleanName = raw => raw.replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 15) || 'Guerrero Anónimo';
@@ -998,7 +1023,7 @@ async function submitRecord() {
     store('auraPlayerName', name);
 
     const database = getDb();
-    if (!database) { msg.textContent = 'No hay conexión con el ranking global. Inténtalo de nuevo más tarde.'; return; }
+    if (!database) { msg.textContent = dbError; return; }
 
     btn.disabled = true;
     btn.textContent = 'Guardando...';
@@ -1013,10 +1038,13 @@ async function submitRecord() {
             timestamp: Date.now()
         }));
         pendingRecord = null;
+        const saveRunBtn = $('saveRunBtn');
+        if (saveRunBtn) saveRunBtn.remove();
         closeModal('saveRecordModal');
         openRanking();
     } catch (e) {
-        msg.textContent = 'No se pudo guardar el récord. Inténtalo de nuevo.';
+        console.error('Guardar récord:', e);
+        msg.textContent = describeDbError(e, 'guardar el récord');
     } finally {
         btn.disabled = false;
         btn.textContent = 'Guardar récord';
@@ -1026,6 +1054,7 @@ async function submitRecord() {
 maxEl.addEventListener('click', openRanking);
 maxEl.addEventListener('keydown', e => { if (e.key === 'Enter') openRanking(); });
 $('closeRankingBtn').addEventListener('click', () => closeModal('rankingModal'));
+$('refreshRankingBtn').addEventListener('click', openRanking);
 $('saveRecordBtn').addEventListener('click', submitRecord);
 $('skipRecordBtn').addEventListener('click', skipRecord);
 $('playerNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitRecord(); });
