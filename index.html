@@ -412,25 +412,24 @@
   </div>
 
   <script>
-    // Configuración opcional de Firebase (Reemplazar con tus claves reales cuando gustes)
+    // Configuración Real de Firebase de tu Proyecto
     const firebaseConfig = {
-      apiKey: "TU_API_KEY",
-      authDomain: "tu-app.firebaseapp.com",
-      databaseURL: "https://tu-app-default-rtdb.firebaseio.com",
-      projectId: "tu-app",
-      storageBucket: "tu-app.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:abcde"
+      apiKey: "AIzaSyDHtKVJdCGA_JWucaOgquBXe0FiyNd0dQw",
+      authDomain: "contador-de-aura-d5bb1.firebaseapp.com",
+      databaseURL: "https://contador-de-aura-d5bb1-default-rtdb.firebaseio.com",
+      projectId: "contador-de-aura-d5bb1",
+      storageBucket: "contador-de-aura-d5bb1.firebasestorage.app",
+      messagingSenderId: "749065236616",
+      appId: "1:749065236616:web:753573ba56d1664523ef3d",
+      measurementId: "G-87G7DBD8B8"
     };
 
     let db = null;
     try {
-      if (firebaseConfig.apiKey !== "TU_API_KEY") {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-      }
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
     } catch (e) {
-      console.log("Firebase no configurado. Usando modo local emulado.");
+      console.log("Error de conexión a Firebase:", e);
     }
 
     // Estado del Juego
@@ -508,7 +507,7 @@
       maxAuraEl.textContent = auraMax;
       maxRangoEl.textContent = rangoMax;
 
-      let currentRank = RANKS[0];
+      let currentRank = RANKS;
       for (let r of RANKS) {
         if (aura >= r.min) currentRank = r;
       }
@@ -611,7 +610,7 @@
           { text: "RANA", correct: false },
           { text: "ÁREA", correct: false }
         ],
-        time: 8 // Rebalanceado (+2s)
+        time: 8
       }),
       // 7. Anagrama / Palabra Épica (+2 segundos extra)
       () => ({
@@ -622,7 +621,7 @@
           { text: "GUITARRA", correct: false },
           { text: "RANGO", correct: false }
         ],
-        time: 8 // Rebalanceado (+2s)
+        time: 8
       }),
       // 8. Secuencia de Memoria (+2 segundos extra)
       () => {
@@ -632,7 +631,7 @@
           id: "memoria_colores",
           desc: `Memoriza y presiona rápidamente: ${target}`,
           btns: colors.map(c => ({ text: c, correct: c === target })),
-          time: 7 // Rebalanceado (+2s)
+          time: 7
         };
       },
       // 9. Secuencia de Símbolos (+2 segundos extra)
@@ -643,7 +642,7 @@
           id: "memoria_simbolos",
           desc: `Toca el elemento correcto: ${target}`,
           btns: icons.map(i => ({ text: i, correct: i === target })),
-          time: 7 // Rebalanceado (+2s)
+          time: 7
         };
       },
       // 10. Precisión Extrema (Reducido a 0.5s)
@@ -653,7 +652,7 @@
         btns: [
           { text: "🎯 ¡AQUÍ!", correct: true }
         ],
-        time: 0.5 // Zona verde reducida a 0.5s
+        time: 0.5
       }),
       // 11. Caza del Emoji Furtivo
       () => {
@@ -810,12 +809,10 @@
     }
 
     function generateChallenge() {
-      // Activar reto de Patreon cerca de Oro (30+ Aura)
       if (aura >= 30 && !patreonUnlocked && Math.random() < 0.35) {
         return createPatreonChallenge();
       }
 
-      // Sistema anti-repetición (memoriza los últimos 7)
       let candidate;
       let attempts = 0;
       do {
@@ -848,7 +845,6 @@
         btnGridEl.appendChild(b);
       });
 
-      // Iniciar Temporizador
       let timeLeft = currentChallenge.time;
       const totalTime = currentChallenge.time;
       timerBarEl.style.width = '100%';
@@ -899,7 +895,7 @@
     function openRankingModal() {
       const modal = document.getElementById('rankingModal');
       const list = document.getElementById('rankingList');
-      list.innerHTML = 'Cargando ranking...';
+      list.innerHTML = 'Cargando ranking en vivo...';
       modal.style.display = 'flex';
 
       if (db) {
@@ -909,6 +905,11 @@
           snapshot.forEach(child => { data.push(child.val()); });
           data.reverse();
 
+          if (data.length === 0) {
+            list.innerHTML = '<li class="ranking-item"><span>Sé el primero en guardar un récord.</span></li>';
+            return;
+          }
+
           data.forEach((item, idx) => {
             const li = document.createElement('li');
             li.className = 'ranking-item';
@@ -917,12 +918,10 @@
           });
         });
       } else {
-        // Fallback Local Emulado
         const myName = localStorage.getItem('playerName') || 'Tú';
         list.innerHTML = `
           <li class="ranking-item"><span><b>#1</b> LeyendaAura (Dios)</span> <b>99 Aura</b></li>
           <li class="ranking-item"><span><b>#2</b> ${myName} (${rangoMax})</span> <b>${auraMax} Aura</b></li>
-          <li class="ranking-item"><span><b>#3</b> GuerreroPro (Oro)</span> <b>35 Aura</b></li>
         `;
       }
     }
